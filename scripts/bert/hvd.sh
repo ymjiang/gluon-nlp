@@ -14,6 +14,7 @@ mpirun -np 8 --allow-run-as-root -mca pml ob1 -mca btl ^openib \
 	    --ckpt_dir $CKPTDIR \
 	    --lr $LR \
 	    --total_batch_size $BS \
+	    --total_batch_size_eval $BS \
 	    --accumulate $ACC \
 	    --model $MODEL \
 	    --max_seq_length $MAX_SEQ_LENGTH \

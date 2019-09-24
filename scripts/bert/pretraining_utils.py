@@ -336,7 +336,7 @@ class BERTForPretrain(mx.gluon.Block):
         ls2 = ls2.mean()
         return classified, decoded, ls1, ls2
 
-def evaluate(data_eval, model, ctx, log_interval, dtype):
+def evaluate(data_eval, model, ctx, log_interval, dtype, rank, num_workers):
     """Evaluation function."""
     logging.info('Running evaluation ... ')
     mlm_metric = nlp.metric.MaskedAccuracy()
@@ -350,7 +350,9 @@ def evaluate(data_eval, model, ctx, log_interval, dtype):
     running_mlm_loss = running_nsp_loss = 0
     total_mlm_loss = total_nsp_loss = 0
     running_num_tks = 0
-    for _, data_batch in enumerate(data_eval):
+    for idx, data_batch in enumerate(data_eval):
+        if idx % num_workers != rank:
+            continue
         step_num += 1
 
         data_list = split_and_load(data_batch, ctx)
@@ -394,12 +396,13 @@ def evaluate(data_eval, model, ctx, log_interval, dtype):
     if running_mlm_loss != 0:
         total_mlm_loss += running_mlm_loss
         total_nsp_loss += running_nsp_loss
-    total_mlm_loss /= step_num
-    total_nsp_loss /= step_num
-    logging.info('Eval mlm_loss={:.3f}\tmlm_acc={:.1f}\tnsp_loss={:.3f}\tnsp_acc={:.1f}\t'
-                 .format(total_mlm_loss.asscalar(), mlm_metric.get_global()[1] * 100,
-                         total_nsp_loss.asscalar(), nsp_metric.get_global()[1] * 100))
-    logging.info('Eval cost={:.1f}s'.format(eval_end_time - eval_begin_time))
+    if step_num > 0:
+        total_mlm_loss /= step_num
+        total_nsp_loss /= step_num
+        logging.info('Eval mlm_loss={:.3f}\tmlm_acc={:.1f}\tnsp_loss={:.3f}\tnsp_acc={:.1f}\t'
+                     .format(total_mlm_loss.asscalar(), mlm_metric.get_global()[1] * 100,
+                             total_nsp_loss.asscalar(), nsp_metric.get_global()[1] * 100))
+        logging.info('Eval cost={:.1f}s'.format(eval_end_time - eval_begin_time))
 
 
 def generate_dev_set(tokenizer, vocab, cache_file, args):

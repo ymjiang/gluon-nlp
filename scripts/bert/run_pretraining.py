@@ -386,7 +386,7 @@ def train(data_train, data_eval, model):
                     # eval data is always based on a fixed npz file.
                     dataset_eval = get_pretrain_data_npz(data_eval, batch_size_eval,
                                                          1, False, 1, vocab)
-                    evaluate(dataset_eval, model, ctxs, args.log_interval, args.dtype)
+                    evaluate(dataset_eval, model, ctxs, args.log_interval, args.dtype, rank, num_workers)
 
             batch_num += 1
 
@@ -464,4 +464,6 @@ if __name__ == '__main__':
         shuffle = False
         dataset_eval = get_pretrain_data_npz(data_eval, batch_size_eval,
                                              len(ctxs), shuffle, 1, vocab)
-        evaluate(dataset_eval, model, ctxs, args.log_interval, args.dtype)
+
+
+        evaluate(dataset_eval, model, ctxs, args.log_interval, args.dtype, rank, num_workers)
