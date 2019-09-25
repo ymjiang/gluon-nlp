@@ -42,6 +42,10 @@ try:
     import horovod.mxnet as hvd
 except ImportError:
     pass
+try:
+    import byteps.mxnet as bps
+except ImportError:
+    pass
 
 from fp16_utils import FP16Trainer
 from pretraining_utils import get_model_loss, get_pretrain_data_npz, get_dummy_dataloader
@@ -131,7 +135,7 @@ parser.add_argument('--num_data_workers', type=int, default=8,
                     help='Number of workers to pre-process data.')
 # communication
 parser.add_argument('--comm_backend', type=str, default='device',
-                    choices=['horovod', 'dist_sync_device', 'device'],
+                    choices=['horovod', 'dist_sync_device', 'device', 'byteps'],
                     help='Communication backend.')
 parser.add_argument('--gpus', type=str, default=None,
                     help='List of gpus to run when device or dist_sync_device is used for '
@@ -194,6 +198,19 @@ def init_comm(backend):
         local_rank = hvd.local_rank()
         is_master_node = rank == local_rank
         ctxs = [mx.gpu(local_rank)]
+    elif backend == 'byteps':
+        try:
+            import byteps.mxnet as bps
+        except ImportError:
+            logging.info('BytePS must be installed.')
+            exit()
+        bps.init()
+        store = None
+        num_workers = bps.size()
+        rank = bps.rank()
+        local_rank = bps.local_rank()
+        is_master_node = rank == local_rank
+        ctxs = [mx.gpu(local_rank)]
     else:
         # kvstore
         store = mx.kv.create(backend)
@@ -241,6 +258,8 @@ def train(data_train, data_eval, model):
     # backend specific implementation
     if backend == 'horovod':
         trainer = hvd.DistributedTrainer(param_dict, 'bertadam', optim_params)
+    elif backend == 'byteps':
+        trainer = bps.DistributedTrainer(param_dict, 'bertadam', optim_params)
     else:
         trainer = mx.gluon.Trainer(param_dict, 'bertadam', optim_params,
                                    update_on_kvstore=False)
