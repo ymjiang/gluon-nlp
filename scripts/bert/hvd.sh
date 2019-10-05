@@ -1,3 +1,4 @@
+pkill python
 mpirun -np 8 --allow-run-as-root -mca pml ob1 -mca btl ^openib \
             -mca btl_tcp_if_exclude docker0,lo --map-by ppr:4:socket:PE=4 \
             --mca plm_rsh_agent 'ssh -q -o StrictHostKeyChecking=no' \
