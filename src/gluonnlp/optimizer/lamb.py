@@ -81,6 +81,11 @@ class LAMB(Optimizer):
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
         self.bias_correction = bias_correction
+        import os
+        if os.environ.get('EPS_AFTER_SQRT', False):
+            self._eps_after_sqrt = True
+        else:
+            self._eps_after_sqrt = False
 
     def create_state(self, index, weight):
         stype = weight.stype
@@ -119,8 +124,12 @@ class LAMB(Optimizer):
             # apply bias correction
             mean_hat = mean / (1. - power(self.beta1, t))
             var_hat = var / (1. - power(self.beta2, t))
-            var_hat += self.epsilon
-            var_hat[:] = sqrt(var_hat)
+            if self._eps_after_sqrt:
+                sqrt(var_hat, out=var_hat)
+                var_hat += self.epsilon
+            else:
+                var_hat += self.epsilon
+                sqrt(var_hat, out=var_hat)
             mean_hat /= var_hat
             mean_hat += wd * weight
             g = mean_hat
