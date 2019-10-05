@@ -143,7 +143,9 @@ parser.add_argument('--gpus', type=str, default=None,
 args = parser.parse_args()
 
 # logging
+nlp.utils.mkdir(args.ckpt_dir)
 level = logging.DEBUG if args.verbose else logging.INFO
+logging.basicConfig(filename=os.path.join(args.ckpt_dir, 'log'))
 logging.getLogger().setLevel(level)
 logging.info(args)
 os.environ['MXNET_GPU_MEM_POOL_TYPE'] = 'Round'
@@ -398,7 +400,6 @@ def train(data_train, data_eval, model):
 
 if __name__ == '__main__':
     random_seed = random.randint(0, 1000)
-    nlp.utils.mkdir(args.ckpt_dir)
 
     dataset_name, vocab = args.dataset_name, None
     if args.sentencepiece:

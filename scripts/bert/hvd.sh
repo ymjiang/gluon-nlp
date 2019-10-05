@@ -11,6 +11,7 @@ mpirun -np 8 --allow-run-as-root -mca pml ob1 -mca btl ^openib \
 	    --data_eval='/data/book-corpus/book-corpus-large-split/*.test,/data/enwiki/enwiki-feb-doc-split/*.test' \
 	    --num_steps $NUMSTEPS \
 	    --dtype $DTYPE \
+	    --ckpt_dir $CKPTDIR \
 	    --lr $LR \
 	    --total_batch_size $BS \
 	    --accumulate $ACC \
@@ -19,7 +20,7 @@ mpirun -np 8 --allow-run-as-root -mca pml ob1 -mca btl ^openib \
 	    --max_predictions_per_seq $MAX_PREDICTIONS_PER_SEQ \
 	    --num_data_workers 4 \
 	    --no_compute_acc --raw \
-	    --comm_backend horovod --log_interval 250
+	    --comm_backend horovod --log_interval $LOGINTERVAL
 
 	    #--synthetic_data --eval_use_npz \
 	    #--verbose \
