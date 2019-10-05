@@ -1,3 +1,4 @@
+pkill python
 export NVIDIA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 export DMLC_WORKER_ID=0
 export DMLC_NUM_WORKER=1
@@ -13,14 +14,18 @@ python /opt/byteps/launcher/launch.py \
             --data_eval='/data/book-corpus/book-corpus-large-split/*.test,/data/enwiki/enwiki-feb-doc-split/*.test' \
             --num_steps $NUMSTEPS \
             --dtype $DTYPE \
-            --lr $LR \
-            --total_batch_size $BS \
-            --accumulate $ACC \
-            --model $MODEL \
-            --max_seq_length $MAX_SEQ_LENGTH \
-            --max_predictions_per_seq $MAX_PREDICTIONS_PER_SEQ \
-            --num_data_workers 4 \
-            --no_compute_acc --raw \
-            --comm_backend byteps --log_interval $LOGINTERVAL
+	    --ckpt_interval $CKPTINTERVAL \
+	    --dtype $DTYPE \
+	    --ckpt_dir $CKPTDIR \
+	    --lr $LR \
+	    --total_batch_size $BS \
+	    --total_batch_size_eval $BS \
+	    --accumulate $ACC \
+	    --model $MODEL \
+	    --max_seq_length $MAX_SEQ_LENGTH \
+	    --max_predictions_per_seq $MAX_PREDICTIONS_PER_SEQ \
+	    --num_data_workers 4 \
+	    --no_compute_acc --raw \
+	    --comm_backend byteps --log_interval $LOGINTERVAL
 
-#            --synthetic_data --eval_use_npz \
+            #--synthetic_data --eval_use_npz \
