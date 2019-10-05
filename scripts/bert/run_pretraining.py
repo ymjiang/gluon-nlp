@@ -59,7 +59,7 @@ parser = argparse.ArgumentParser(description='BERT pretraining example.')
 parser.add_argument('--ckpt_dir', type=str, default='./ckpt_dir',
                     help='Path to checkpoint directory')
 parser.add_argument('--log_interval', type=int, default=250, help='Report interval')
-parser.add_argument('--ckpt_interval', type=int, default=25000, help='Checkpoint interval')
+parser.add_argument('--ckpt_interval', type=int, default=300000, help='Checkpoint interval')
 # model
 parser.add_argument('--pretrained', action='store_true',
                     help='Initialize the model with pretrained weights')

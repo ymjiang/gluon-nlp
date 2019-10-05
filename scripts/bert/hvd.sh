@@ -10,6 +10,7 @@ mpirun -np 8 --allow-run-as-root -mca pml ob1 -mca btl ^openib \
 	    --data='/data/book-corpus/book-corpus-large-split/*.train,/data/enwiki/enwiki-feb-doc-split/*.train' \
 	    --data_eval='/data/book-corpus/book-corpus-large-split/*.test,/data/enwiki/enwiki-feb-doc-split/*.test' \
 	    --num_steps $NUMSTEPS \
+	    --ckpt_interval $CKPTINTERVAL \
 	    --dtype $DTYPE \
 	    --ckpt_dir $CKPTDIR \
 	    --lr $LR \
