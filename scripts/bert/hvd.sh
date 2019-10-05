@@ -1,4 +1,7 @@
 pkill python
+
+
+
 mpirun -np 8 --allow-run-as-root -mca pml ob1 -mca btl ^openib \
             -mca btl_tcp_if_exclude docker0,lo --map-by ppr:4:socket:PE=4 \
             --mca plm_rsh_agent 'ssh -q -o StrictHostKeyChecking=no' \
@@ -11,6 +14,7 @@ mpirun -np 8 --allow-run-as-root -mca pml ob1 -mca btl ^openib \
 	    --data='/data/book-corpus/book-corpus-large-split/*.train,/data/enwiki/enwiki-feb-doc-split/*.train' \
 	    --data_eval='/data/book-corpus/book-corpus-large-split/*.test,/data/enwiki/enwiki-feb-doc-split/*.test' \
 	    --optimizer $OPTIMIZER \
+	    --warmup_ratio $WARMUP_RATIO \
 	    --num_steps $NUMSTEPS \
 	    --ckpt_interval $CKPTINTERVAL \
 	    --dtype $DTYPE \
