@@ -18,6 +18,7 @@
 """LAMB optimizer"""
 
 from mxnet.optimizer import Optimizer, register
+from mxnet.engine import bulk
 from mxnet.ndarray import zeros, ones_like, NDArray
 from mxnet.ndarray import square, power, sqrt, maximum, minimum, clip, where
 
@@ -86,8 +87,9 @@ class LAMB(Optimizer):
             self._eps_after_sqrt = True
         else:
             self._eps_after_sqrt = False
+        self._bulk = int(os.environ.get('LAMB_BULK', 0))
         import logging
-        logging.info('self._eps_after_sqrt = ' + str(self._eps_after_sqrt))
+        logging.info('self._eps_after_sqrt = ' + str(self._eps_after_sqrt) + " bulk = " + str(self._bulk))
 
     def create_state(self, index, weight):
         stype = weight.stype
@@ -104,47 +106,48 @@ class LAMB(Optimizer):
         wd = self._get_wd(index)
         t = self._index_update_count[index]
 
-        # preprocess grad
-        grad *= self.rescale_grad
-        if self.clip_gradient is not None:
-            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+        with bulk(self._bulk):
+            # preprocess grad
+            grad *= self.rescale_grad
+            if self.clip_gradient is not None:
+                grad = clip(grad, -self.clip_gradient, self.clip_gradient)
 
-        mean, var = state
-        mean *= self.beta1
-        mean += (1. - self.beta1) * grad
-        var *= self.beta2
-        var += (1. - self.beta2) * square(grad)
+            mean, var = state
+            mean *= self.beta1
+            mean += (1. - self.beta1) * grad
+            var *= self.beta2
+            var += (1. - self.beta2) * square(grad)
 
-        r1 = weight.norm()
-        if not self.bias_correction:
-            r1 = minimum(maximum(r1, self.lower_bound), self.upper_bound)
-            sqrt_var = sqrt(var)
-            sqrt_var += self.epsilon
-            g = mean / sqrt_var
-            g += wd * weight
-        else:
-            # apply bias correction
-            mean_hat = mean / (1. - power(self.beta1, t))
-            var_hat = var / (1. - power(self.beta2, t))
-            if self._eps_after_sqrt:
-                sqrt(var_hat, out=var_hat)
-                var_hat += self.epsilon
+            r1 = weight.norm()
+            if not self.bias_correction:
+                r1 = minimum(maximum(r1, self.lower_bound), self.upper_bound)
+                sqrt_var = sqrt(var)
+                sqrt_var += self.epsilon
+                g = mean / sqrt_var
+                g += wd * weight
             else:
-                var_hat += self.epsilon
-                sqrt(var_hat, out=var_hat)
-            mean_hat /= var_hat
-            mean_hat += wd * weight
-            g = mean_hat
+                # apply bias correction
+                mean_hat = mean / (1. - power(self.beta1, t))
+                var_hat = var / (1. - power(self.beta2, t))
+                if self._eps_after_sqrt:
+                    sqrt(var_hat, out=var_hat)
+                    var_hat += self.epsilon
+                else:
+                    var_hat += self.epsilon
+                    sqrt(var_hat, out=var_hat)
+                mean_hat /= var_hat
+                mean_hat += wd * weight
+                g = mean_hat
 
-        r2 = g.norm()
+            r2 = g.norm()
 
-        # calculate lamb_trust_ratio
-        ratio = r1 / r2
-        # becomes NaN if ratio == NaN or 0, otherwise 0
-        nan_or_zero = 1 - ratio / ratio
-        r = where(nan_or_zero, ones_like(ratio), ratio)
-        lr *= r
+            # calculate lamb_trust_ratio
+            ratio = r1 / r2
+            # becomes NaN if ratio == NaN or 0, otherwise 0
+            nan_or_zero = 1 - ratio / ratio
+            r = where(nan_or_zero, ones_like(ratio), ratio)
+            lr *= r
 
-        # update weight
-        g *= lr
-        weight[:] -= g
+            # update weight
+            g *= lr
+            weight[:] -= g
