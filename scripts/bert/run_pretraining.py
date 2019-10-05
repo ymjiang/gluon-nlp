@@ -78,6 +78,7 @@ parser.add_argument('--data', type=str, default=None,
 parser.add_argument('--total_batch_size', type=int, default=256,
                     help='Global effective batch size. '
                          'total_batch_size = batch_size_per_worker * num_worker * accumulate.')
+parser.add_argument('--optimizer', type=str, default='bertadam')
 parser.add_argument('--accumulate', type=int, default=1,
                     help='Number of batches for gradient accumulation. '
                          'total_batch_size = batch_size_per_worker * num_worker * accumulate.')
@@ -250,6 +251,8 @@ def train(data_train, data_eval, model):
     optim_params = {'learning_rate': lr, 'epsilon': 1e-6, 'wd': 0.01}
     if args.dtype == 'float16':
         optim_params['multi_precision'] = True
+    if args.optimizer == 'lamb':
+        optim_params['bias_correction'] = True
 
     dynamic_loss_scale = args.dtype == 'float16'
     if dynamic_loss_scale:
@@ -259,11 +262,11 @@ def train(data_train, data_eval, model):
 
     # backend specific implementation
     if backend == 'horovod':
-        trainer = hvd.DistributedTrainer(param_dict, 'bertadam', optim_params)
+        trainer = hvd.DistributedTrainer(param_dict, args.optimizer, optim_params)
     elif backend == 'byteps':
-        trainer = bps.DistributedTrainer(param_dict, 'bertadam', optim_params)
+        trainer = bps.DistributedTrainer(param_dict, args.optimizer, optim_params)
     else:
-        trainer = mx.gluon.Trainer(param_dict, 'bertadam', optim_params,
+        trainer = mx.gluon.Trainer(param_dict, args.optimizer, optim_params,
                                    update_on_kvstore=False)
     fp16_trainer = FP16Trainer(trainer, dynamic_loss_scale=dynamic_loss_scale,
                                loss_scaler_params=loss_scale_param)

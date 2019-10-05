@@ -86,6 +86,8 @@ class LAMB(Optimizer):
             self._eps_after_sqrt = True
         else:
             self._eps_after_sqrt = False
+        import logging
+        logging.info('self._eps_after_sqrt = ' + str(self._eps_after_sqrt))
 
     def create_state(self, index, weight):
         stype = weight.stype

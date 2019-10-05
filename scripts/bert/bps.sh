@@ -12,6 +12,7 @@ python /opt/byteps/launcher/launch.py \
 	python run_pretraining.py \
             --data='/data/book-corpus/book-corpus-large-split/*.train,/data/enwiki/enwiki-feb-doc-split/*.train' \
             --data_eval='/data/book-corpus/book-corpus-large-split/*.test,/data/enwiki/enwiki-feb-doc-split/*.test' \
+	    --optimizer $OPTIMIZER \
             --num_steps $NUMSTEPS \
             --dtype $DTYPE \
 	    --ckpt_interval $CKPTINTERVAL \
