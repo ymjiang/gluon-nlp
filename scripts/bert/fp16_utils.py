@@ -242,8 +242,9 @@ class DynamicLossScaler(LossScaler):
                 self.loss_scale /= self.scale_factor
                 self._last_rescale_iter = self._num_steps
                 self._overflows_since_rescale = 0
-                if self.loss_scale < 1:
-                    warnings.warn('DynamicLossScaler: overflow detected. set loss_scale = %s'%
+                if self.loss_scale < 1 or True:
+                    import logging
+                    logging.info('DynamicLossScaler: overflow detected. set loss_scale = %s'%
                                   self.loss_scale)
         elif (self._num_steps - self._last_overflow_iter) % self.scale_window == 0:
             self.loss_scale *= self.scale_factor

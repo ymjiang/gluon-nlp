@@ -229,8 +229,8 @@ backend = args.comm_backend
 store, num_workers, rank, local_rank, is_master_node, ctxs = init_comm(backend)
 assert args.total_batch_size % (args.accumulate * num_workers) == 0
 assert args.total_batch_size_eval % (args.accumulate * num_workers) == 0
-batch_size = int(args.total_batch_size / num_workers / args.accumulate)
-batch_size_eval = int(args.total_batch_size_eval / num_workers / args.accumulate)
+batch_size = int(args.total_batch_size / num_workers / args.accumulate / len(ctxs))
+batch_size_eval = int(args.total_batch_size_eval / num_workers / args.accumulate / len(ctxs))
 assert batch_size > 0
 assert batch_size_eval > 0
 
@@ -359,7 +359,8 @@ def train(data_train, data_eval, model):
                 fp16_trainer.step(1, max_norm=1.0 * num_workers)
             # update metrics
             if args.no_compute_acc:
-                mask_pred_list[0].wait_to_read()
+                for mask_pred_i in mask_pred_list:
+                    mask_pred_i.wait_to_read()
             else:
                 nsp_metric.update(ns_label_list, ns_pred_list)
                 mlm_metric.update(mask_label_list, mask_pred_list, mask_weight_list)
