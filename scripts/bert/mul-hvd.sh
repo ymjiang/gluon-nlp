@@ -18,7 +18,7 @@ mpirun -np $NP --hostfile hosts -display-allocation --allow-run-as-root \
             --map-by ppr:4:socket:PE=4 \
 	    -x LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/local/cuda/compat/lib:/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/lib \
 	    --mca plm_rsh_agent 'ssh -q -o StrictHostKeyChecking=no -p 12340' \
-	    -x NCCL_MIN_NRINGS=8 -x NCCL_DEBUG=INFO \
+	    -x NCCL_MIN_NRINGS=$NCCLMINNRINGS -x NCCL_DEBUG=INFO \
 	    -x HOROVOD_HIERARCHICAL_ALLREDUCE=1 \
 	    -x HOROVOD_CYCLE_TIME=1 \
 	    -x MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN=120 \
