@@ -150,6 +150,7 @@ logging.basicConfig(filename=os.path.join(args.ckpt_dir, 'log'))
 logging.getLogger().setLevel(level)
 logging.info(args)
 os.environ['MXNET_GPU_MEM_POOL_TYPE'] = 'Round'
+logging.info(os.environ)
 
 class DataParallelBERT(nlp.utils.Parallelizable):
     """Data parallel BERT model.
@@ -356,7 +357,7 @@ def train(data_train, data_eval, model):
 
             # update
             if (batch_num + 1) % accumulate == 0:
-                fp16_trainer.step(1, max_norm=1.0 * num_workers)
+                fp16_trainer.step(1, max_norm=1.0 * num_workers, num_ctxs=len(ctxs) * num_workers)
             # update metrics
             if args.no_compute_acc:
                 for mask_pred_i in mask_pred_list:

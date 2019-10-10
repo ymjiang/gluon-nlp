@@ -142,7 +142,7 @@ class FP16Trainer:
                 ls = loss * self._scaler.loss_scale
         mx.autograd.backward(ls)
 
-    def step(self, batch_size, max_norm=None):
+    def step(self, batch_size, max_norm=None, num_ctxs=None):
         """Makes one step of parameter update. Should be called after
         `fp16_optimizer.backward()`, and outside of `record()` scope.
 
@@ -154,7 +154,8 @@ class FP16Trainer:
         max_norm : NDArray, optional, default is None
             max value for global 2-norm of gradients.
         """
-        self.fp32_trainer.allreduce_grads()
+        if num_ctxs and num_ctxs > 1:
+            self.fp32_trainer.allreduce_grads()
         step_size = batch_size * self._scaler.loss_scale
         if max_norm:
             _, ratio, is_finite = grad_global_norm(self.fp32_trainer._params,
