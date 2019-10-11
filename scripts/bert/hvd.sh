@@ -4,6 +4,7 @@ pkill python
 	    #--verbose \
 	    #-x HOROVOD_TIMELINE=timeline.json \
 	    #-x MXNET_HOROVOD_NUM_GROUPS=4 \
+	    #--synthetic_data --eval_use_npz \
 
 mpirun -np $NP --allow-run-as-root -mca pml ob1 -mca btl ^openib \
             -mca btl_tcp_if_exclude docker0,lo --bind-to none \
@@ -17,7 +18,6 @@ mpirun -np $NP --allow-run-as-root -mca pml ob1 -mca btl ^openib \
 	    --tag-output ompi_bind_DGX1.sh python run_pretraining.py \
 	    --data='/data/book-corpus/book-corpus-large-split/*.train,/data/enwiki/enwiki-feb-doc-split/*.train' \
 	    --data_eval='/data/book-corpus/book-corpus-large-split/*.test,/data/enwiki/enwiki-feb-doc-split/*.test' \
-	    --synthetic_data --eval_use_npz \
 	    --optimizer $OPTIMIZER \
 	    --warmup_ratio $WARMUP_RATIO \
 	    --num_steps $NUMSTEPS \
