@@ -300,6 +300,7 @@ def train(data_train, data_eval, model):
     step_num = args.start_step
 
     logging.debug('Training started')
+    logging.info('Generating the first batch of data, which may take a few minutes ...')
 
     # create dummy data loader if needed
     parallel_model = DataParallelBERT(model, trainer=fp16_trainer)
