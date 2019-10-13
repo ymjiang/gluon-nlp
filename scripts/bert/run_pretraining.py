@@ -488,7 +488,7 @@ if __name__ == '__main__':
                                         num_parts=num_workers, part_idx=rank,
                                         num_workers=args.num_data_workers)
         train(data_train, data_eval, model)
-    if data_eval and is_master_node:
+    if data_eval:
         # eval data is always based on a fixed npz file.
         shuffle = False
         dataset_eval = get_pretrain_data_npz(data_eval, batch_size_eval,
