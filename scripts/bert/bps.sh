@@ -28,13 +28,15 @@ export MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD="${MXNET_EXEC_BULK_EXEC_MAX_NODE_
 export MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD="${MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD:-120}"
 export MXNET_SAFE_ACCUMULATION="${MXNET_SAFE_ACCUMULATION:-1}"
 export OPTIONS="${OPTIONS:- }"
+export DATA="${DATA:-/data/book-corpus/book-corpus-large-split/*.train,/data/enwiki/enwiki-feb-doc-split/*.train}"
+export DATAEVAL="${DATAEVAL:-/data/book-corpus/book-corpus-large-split/*.test,/data/enwiki/enwiki-feb-doc-split/*.test}"
 
 echo $NVIDIA_VISIBLE_DEVICES
 
 python3 $BPS_HOME/launcher/launch.py \
 	python3 run_pretraining.py \
-            --data='/data/book-corpus/book-corpus-large-split/*.train,/data/enwiki/enwiki-feb-doc-split/*.train' \
-            --data_eval='/data/book-corpus/book-corpus-large-split/*.test,/data/enwiki/enwiki-feb-doc-split/*.test' \
+            --data=$DATA \
+            --data_eval=$DATAEVAL \
 	    --optimizer $OPTIMIZER \
 	    --warmup_ratio $WARMUP_RATIO \
             --num_steps $NUMSTEPS \
@@ -49,5 +51,7 @@ python3 $BPS_HOME/launcher/launch.py \
 	    --max_seq_length $MAX_SEQ_LENGTH \
 	    --max_predictions_per_seq $MAX_PREDICTIONS_PER_SEQ \
 	    --num_data_workers 4 \
-	    --no_compute_acc --raw \
+	    --no_compute_acc \
 	    --comm_backend byteps --log_interval $LOGINTERVAL $OPTIONS
+
+# --raw

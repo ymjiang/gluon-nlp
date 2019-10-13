@@ -133,16 +133,20 @@ class FP16Trainer:
         # TODO(haibin) this should be added via registry
         self._support_nan_check = trainer._optimizer.__class__.__name__ == 'BERTAdam'
 
-    def backward(self, loss):
+    def backward(self, loss, verbose=False):
         """backward propagation with loss"""
         with mx.autograd.record():
             if isinstance(loss, (tuple, list)):
                 ls = [l * self._scaler.loss_scale for l in loss]
             else:
                 ls = loss * self._scaler.loss_scale
+        if verbose:
+            import logging
+            import byteps.mxnet as bps
+            logging.info('{} loss scale = {}'.format(bps.rank(), self._scaler.loss_scale))
         mx.autograd.backward(ls)
 
-    def step(self, batch_size, max_norm=None, num_ctxs=None):
+    def step(self, batch_size, max_norm=None, num_ctxs=None, verbose=False):
         """Makes one step of parameter update. Should be called after
         `fp16_optimizer.backward()`, and outside of `record()` scope.
 
@@ -166,6 +170,10 @@ class FP16Trainer:
                 overflow = is_finite.asscalar() < 1
             else:
                 overflow = is_finite.asscalar() < 1
+                if verbose:
+                    import logging
+                    import byteps.mxnet as bps
+                    logging.info('{} overflow = {}, ratio = {}'.format(bps.rank(), overflow, ratio.asscalar()))
                 if not overflow:
                     self.fp32_trainer.update(step_size)
         else:

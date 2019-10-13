@@ -244,12 +244,12 @@ def get_dummy_dataloader(batch_size, seq_len, max_predict):
         def __iter__(self):
             while True:
                 yield self._batch
-    data_batch = ((mx.nd.zeros((batch_size, seq_len)),
-                   mx.nd.zeros((batch_size, max_predict)),
-                   mx.nd.zeros((batch_size, max_predict)),
-                   mx.nd.zeros((batch_size, max_predict)),
+    data_batch = ((mx.nd.ones((batch_size, seq_len)),
+                   mx.nd.ones((batch_size, max_predict)),
+                   mx.nd.ones((batch_size, max_predict)),
+                   mx.nd.ones((batch_size, max_predict)),
                    mx.nd.ones((batch_size,)) * seq_len,
-                   mx.nd.zeros((batch_size, seq_len)),
+                   mx.nd.ones((batch_size, seq_len)),
                    mx.nd.ones((batch_size,)) * seq_len))
     return DummyIter(data_batch)
 
@@ -277,7 +277,7 @@ def log_noacc(begin_time, running_num_tks, running_mlm_loss, running_nsp_loss, s
     lr = trainer.learning_rate if trainer else 0
     # pylint: disable=line-too-long
     logging.info('[step {}]\tmlm_loss={:7.5f}\tnsp_loss={:5.2f}\tthroughput={:.1f}K tks/s\tlr={:.7f} time={:.2f}, latency={:.1f} ms/batch'
-                 .format(step_num, running_mlm_loss.asscalar(), running_nsp_loss.asscalar(),
+                 .format(step_num, running_mlm_loss.asscalar(), 0,
                          throughput.asscalar(), lr, duration, duration*1000/log_interval))
     # pylint: enable=line-too-long
 
@@ -330,7 +330,7 @@ class BERTForPretrain(mx.gluon.Block):
                 next_sentence_label=None, segment_id=None, valid_length=None):
         # pylint: disable=arguments-differ
         """Predict with BERT for MLM and NSP. """
-        num_masks = masked_weight.sum() + 1e-8
+        num_masks = masked_weight.sum()
         valid_length = valid_length.reshape(-1)
         masked_id = masked_id.reshape(-1)
         _, _, classified, decoded = self.bert(input_id, segment_id, valid_length, masked_position)
@@ -338,9 +338,9 @@ class BERTForPretrain(mx.gluon.Block):
         ls1 = self.mlm_loss(decoded.astype('float32', copy=False),
                             masked_id, masked_weight.reshape((-1, 1)))
         ls2 = self.nsp_loss(classified.astype('float32', copy=False), next_sentence_label)
-        ls1 = ls1.sum() / num_masks
+        ls1 = ls1.sum()
         ls2 = ls2.mean()
-        return classified, decoded, ls1, ls2
+        return classified, decoded, ls1, ls2, num_masks
 
 def evaluate(data_eval, model, ctx, log_interval, dtype, rank, num_workers):
     """Evaluation function."""

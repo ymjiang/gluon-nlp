@@ -173,9 +173,8 @@ class DataParallelBERT(nlp.utils.Parallelizable):
         with mx.autograd.record():
             out = self._model(input_id, masked_id, masked_position, masked_weight,
                               next_sentence_label, segment_id, valid_length)
-            classified, decoded, ls1, ls2 = out
+            classified, decoded, ls1, ls2, num_masks = out
             ls = ls1 + ls2
-            ls = ls / args.accumulate
         if self._trainer:
             self._trainer.backward(ls)
         else:
@@ -184,7 +183,7 @@ class DataParallelBERT(nlp.utils.Parallelizable):
         masked_id = masked_id.reshape(-1)
         valid_length = valid_length.astype('float32', copy=False)
         return next_sentence_label, classified, masked_id, decoded, \
-               masked_weight, ls1, ls2, valid_length
+               masked_weight, ls1, ls2, valid_length, num_masks
 
 def init_comm(backend):
     """Init communication backend"""
@@ -259,7 +258,7 @@ def train(data_train, data_eval, model):
 
     dynamic_loss_scale = args.dtype == 'float16'
     if dynamic_loss_scale:
-        loss_scale_param = {'scale_window': 2000 / num_workers}
+        loss_scale_param = {'scale_window': 2000 / num_workers, 'init_scale': 1}
     else:
         loss_scale_param = None
 
@@ -295,6 +294,7 @@ def train(data_train, data_eval, model):
     train_begin_time = time.time()
     begin_time = time.time()
     running_mlm_loss, running_nsp_loss = 0, 0
+    local_mlm_loss, local_num_masks = 0, mx.nd.array([0], ctx=ctxs[0])
     running_num_tks = 0
     batch_num = 0
     step_num = args.start_step
@@ -306,6 +306,16 @@ def train(data_train, data_eval, model):
     parallel_model = DataParallelBERT(model, trainer=fp16_trainer)
     num_ctxes = len(ctxs)
     parallel = nlp.utils.Parallel(num_ctxes if num_ctxes > 1 else 0, parallel_model)
+
+    if backend == 'byteps':
+        bps.byteps_declare_tensor(local_num_masks, "local_num_masks")
+        bps.byteps_push_pull(local_num_masks, is_average=False, name="local_num_masks", priority=0)
+        logging.debug('Broadcast local_num_masks tensor')
+        next_batch = next(iter(get_dummy_dataloader(batch_size, args.max_seq_length, args.max_predictions_per_seq)))
+        data_list = list(split_and_load(next_batch, ctxs))
+        parallel.put(data_list[0])
+        parallel.get()
+        trainer._init_params()
 
     while step_num < num_train_steps:
 
@@ -346,15 +356,15 @@ def train(data_train, data_eval, model):
                     parallel.put(data_list[i])
                 for _ in range(num_data):
                     (next_sentence_label, classified, masked_id,
-                     decoded, masked_weight, ls1, ls2, valid_length) = parallel.get()
+                     decoded, masked_weight, ls1, ls2, valid_length, num_masks) = parallel.get()
                     ns_label_list.append(next_sentence_label)
                     ns_pred_list.append(classified)
                     mask_label_list.append(masked_id)
                     mask_pred_list.append(decoded)
                     mask_weight_list.append(masked_weight)
-                    running_mlm_loss += ls1.as_in_context(mx.cpu()) / len(ctxs)
-                    running_nsp_loss += ls2.as_in_context(mx.cpu()) / len(ctxs)
-                    running_num_tks += valid_length.sum().as_in_context(mx.cpu())
+                    local_num_masks += num_masks
+                    local_mlm_loss += ls1
+                    running_num_tks += valid_length.sum()
             # pre fetch next batch
             try:
                 next_data_batch = next(data_train_iter)
@@ -363,7 +373,16 @@ def train(data_train, data_eval, model):
 
             # update
             if (batch_num + 1) % accumulate == 0:
-                fp16_trainer.step(1, max_norm=1.0 * num_workers, num_ctxs=len(ctxs) * num_workers)
+                running_mlm_loss += local_mlm_loss / local_num_masks
+                if backend == 'horovod':
+                    hvd.allreduce_(local_num_masks, average=False, name='local_num_masks')
+                elif backend == 'byteps':
+                    bps.byteps_push_pull(local_num_masks, is_average=False,
+                                         name="local_num_masks", priority=0)
+                # because byteps implicitly set scale /= num_workers
+                fp16_trainer.step(local_num_masks * num_workers, max_norm=local_num_masks,
+                                  num_ctxs=len(ctxs) * num_workers)
+                local_num_masks, local_mlm_loss = 0, 0
             # update metrics
             if args.no_compute_acc:
                 for mask_pred_i in mask_pred_list:
@@ -375,9 +394,8 @@ def train(data_train, data_eval, model):
             # logging
             if (step_num + 1) % (args.log_interval) == 0 and (batch_num + 1) % accumulate == 0:
                 if args.no_compute_acc:
-                    log_noacc(begin_time, running_num_tks, running_mlm_loss / accumulate,
-                              running_nsp_loss / accumulate, step_num,
-                              trainer, args.log_interval)
+                    log_noacc(begin_time, running_num_tks, running_mlm_loss,
+                              0, step_num, trainer, args.log_interval)
                 else:
                     log(begin_time, running_num_tks, running_mlm_loss / accumulate,
                         running_nsp_loss / accumulate, step_num, mlm_metric, nsp_metric,
