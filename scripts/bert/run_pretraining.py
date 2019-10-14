@@ -233,6 +233,7 @@ batch_size = int(args.total_batch_size / num_workers / args.accumulate / len(ctx
 batch_size_eval = int(args.total_batch_size_eval / num_workers / args.accumulate / len(ctxs))
 assert batch_size > 0
 assert batch_size_eval > 0
+logging.info("{} / {}".format(rank, num_workers))
 
 early_stop = os.environ.get('HOROVOD_TIMELINE', None)
 
