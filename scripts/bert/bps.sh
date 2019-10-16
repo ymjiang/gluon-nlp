@@ -1,5 +1,3 @@
-pkill python
-
 export TRUNCATE_NORM="${TRUNCATE_NORM:-1}"
 export LAMB_BULK="${LAMB_BULK:-30}"
 export EPS_AFTER_SQRT="${EPS_AFTER_SQRT:-1}"
@@ -54,4 +52,3 @@ python3 $BPS_HOME/launcher/launch.py \
 	    --no_compute_acc \
 	    --comm_backend byteps --log_interval $LOGINTERVAL $OPTIONS 2>&1 | tee -a full.log
 
-# --raw
