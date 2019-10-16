@@ -146,7 +146,7 @@ args = parser.parse_args()
 # logging
 nlp.utils.mkdir(args.ckpt_dir)
 level = logging.DEBUG if args.verbose else logging.INFO
-logging.basicConfig(filename=os.path.join(args.ckpt_dir, 'log'))
+# logging.basicConfig(filename=os.path.join(args.ckpt_dir, 'log'))
 logging.getLogger().setLevel(level)
 logging.info(args)
 os.environ['MXNET_GPU_MEM_POOL_TYPE'] = 'Round'

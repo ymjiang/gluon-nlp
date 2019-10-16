@@ -17,7 +17,7 @@
 
 """Utilities for pre-training."""
 import time
-import os
+import os, sys
 import logging
 import random
 import multiprocessing
